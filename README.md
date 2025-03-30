@@ -1,13 +1,9 @@
 # PokeScraper_3.0
 
-Need to update -- but we have Poke_Sets.py which pulls a full history of all sets eng/jap and stores it under data. Pokellector_V3 pulls img, price, set, etc of the cards you are looking for.
+This repository contains two Python scripts designed to scrape Pokémon-related data from Pokellector (English) and jp.pokellector.com (Japanese):
+1. Pokémon Set Data Scraper (pokemon_set_data_scraper.py): Extracts metadata about Pokémon card sets, including set names, descriptions, card counts, secret card counts, and release dates, from the "Sets" pages of both sites. The output is saved as pokellector_set_data.csv, which serves as a foundational dataset for further scraping or analysis.
 
-There are two main py codes in this newest update. We also plan to build out a flask UI and pull better pricing data. But for now this is what we have. Set scraper and card scraper. The set results are stored in ./data NOTE this has to be ran first or atleast have the csv saved. 
+2. Pokémon Card Scraper (pokemon_card_scraper.py): Scrapes detailed card data for specific Pokémon names, pulling information like card names, set names, card numbers, prices, image URLs, and release dates (linked from the set data CSV). Results are saved as individual CSV files per Pokémon (e.g., Pikachu.csv).
 
-## Pokémon Set Data Scraper
+Together, these tools enable comprehensive data collection for Pokémon trading card enthusiasts, researchers, or developers, covering both set-level metadata and individual card details across English and Japanese markets.
 
-This Python script scrapes Pokémon set data from the "Sets" pages of Pokellector (English) and jp.pokellector.com (Japanese). It collects details such as set names, descriptions, card counts, secret card counts, and release dates, then saves the data into a CSV file for use in further analysis or projects.
-
-## Pokémon Card Scraper
-
-This Python script scrapes Pokémon card data from Pokellector (English) and its Japanese counterpart (jp.pokellector.com). It retrieves card details such as name, set, card number, price, image URL, and release date, then saves the data into CSV files for further analysis or use.
