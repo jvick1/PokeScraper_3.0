@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 import csv
 from datetime import datetime
+import json
 
 WD_PATH = "E:/Code/Python/Pokemon/output/"
 ENG_URL = "https://www.pokellector.com/"
@@ -98,21 +99,30 @@ def fetch_card_data(driver, base_url, page_urls, site, timeout=2):
                     card_set = set_and_card.strip()
                     card_number = ""
 
-                card_price = card.find("div", attrs={"class": "prices"}).text.strip() if card.find("div", attrs={"class": "prices"}) else "NULL" #rn I pull all prices maybe avg them or provide links (they are affilate links tho)
-                
+                # Extract all prices as dictionary
+                prices_div = card.find("div", attrs={"class": "prices"})
+                prices = {}
+                if prices_div:
+                    price_links = prices_div.find_all("a", href=True) #find all <a> tags
+                    for link in price_links:
+                        href = link["href"]
+                        # Extract price
+                        price_text = link.get_text(strip=True).replace(link.find("img").text, "").strip()
+                        prices[href] = price_text or "N/A"
+
                 img_tag = card.find('img', class_='card ls-is-cached lazyloaded') 
-                img_url = ""
+                img_url = {}
                 if img_tag and 'src' in img_tag.attrs: 
                     src = img_tag['src'] 
                     if src != 'https://www.pokellector.com/images/card-placeholder-small.jpg':
-                        img_url = img_tag['src']
+                        img_url["pokellector"] = src
 
                 #pull all set data, store as csv, read that in, and provide date the card came out
                 release_date = SET_RELEASE_DATES.get(card_set, "N/A")
                 # Reformat the release date for sorting
                 formatted_release_date = parse_and_format_date(release_date)
 
-                card_data.append({"Name": card_name, "Image URL": img_url, "Set": card_set, "Card Number": card_number, "Price": card_price, "Site": site, "Release Date": formatted_release_date})
+                card_data.append({"Name": card_name, "Images": img_url, "Set": card_set, "Card Number": card_number, "Prices": prices, "Site": site, "Release Date": formatted_release_date})
             
         except WebDriverException as e:
             time.sleep(2)
@@ -123,6 +133,8 @@ def save_to_csv(data, filename):
     Saves a list of card data to a CSV file.
     """
     df = pd.DataFrame(data)
+    df["Prices"] = df["Prices"].apply(json.dumps)
+    df["Images"] = df["Images"].apply(json.dumps)
     df.to_csv(WD_PATH + filename + ".csv", index=False)
     print(f"Data saved to {WD_PATH}{filename}.csv")
 
