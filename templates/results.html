@@ -4,11 +4,20 @@
     <title>Results - Pokémon Card Scraper</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Add DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
 </head>
 <body>
     <div class="container">
         <h1>Scraped Pokémon Cards</h1>
-        <table class="data">
+
+        <form method="POST" action="{{ url_for('index') }}">
+            <label for="pokemon_names">Search for more Pokémon cards (comma-separated):</label><br>
+            <input type="text" id="pokemon_names" name="pokemon_names" size="50"><br><br>
+            <input type="submit" value="Scrape New Cards">
+        </form>
+
+        <table class="data" id="cardTable">
             <thead>
                 <tr>
                     <th>Image</th>
@@ -40,7 +49,7 @@
                                     {% for url, price in prices.items() %}
                                         <li>
                                             <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
-                                                {{ price }} <span class="source">{{ url|truncate(30, True, '...') }}</span>
+                                                {{ price }} 
                                             </a>
                                         </li>
                                     {% endfor %}
@@ -61,5 +70,23 @@
         </form>
         <a href="{{ url_for('index') }}">Back to Search</a>
     </div>
+
+    <!-- Add jQuery and DataTables JS -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#cardTable').DataTable({
+                // Optional configuration
+                "order": [[1, "asc"]], // Default sort by Name column
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 }, // Disable sorting on Image column
+                    { "type": "num", "targets": 3 } // Numeric sorting for Card Number
+                ],
+                "pageLenght":50,
+                "lengthMenu": [50, 75, 100]
+            });
+        });
+    </script>
 </body>
 </html>
