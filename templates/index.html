@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pokémon Card Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Pokémon Card Scraper</h1>
+    <form method="POST">
+        <label for="pokemon_names">Enter Pokémon names (comma-separated):</label><br>
+        <input type="text" id="pokemon_names" name="pokemon_names" size="50"><br><br>
+        <input type="submit" value="Scrape Cards">
+    </form>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+</body>
+</html>
