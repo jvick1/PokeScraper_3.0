@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Results - Pokémon Card Scraper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Scraped Pokémon Cards</h1>
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Set</th>
+                    <th>Card Number</th>
+                    <th>Prices</th>
+                    <th>Site</th>
+                    <th>Release Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row, img_url in rows|zip(image_urls) %}
+                    <tr>
+                        <td>
+                            {% if img_url %}
+                                <img src="{{ img_url }}" alt="{{ row['Name'] }}" style="max-width: 100px; height: auto;">
+                            {% else %}
+                                No Image
+                            {% endif %}
+                        </td>
+                        <td>{{ row['Name'] }}</td>
+                        <td>{{ row['Set'] }}</td>
+                        <td>{{ row['Card Number'] }}</td>
+                        <td>
+                            {% set prices = row['Prices']|from_json %}
+                            {% if prices %}
+                                <ul class="price-list">
+                                    {% for url, price in prices.items() %}
+                                        <li>
+                                            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
+                                                {{ price }} <span class="source">{{ url|truncate(30, True, '...') }}</span>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                No Prices
+                            {% endif %}
+                        </td>
+                        <td>{{ row['Site'] }}</td>
+                        <td>{{ row['Release Date'] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <form method="POST" action="{{ url_for('download', filename=filename) }}">
+            <input type="hidden" name="csv_data" value="{{ csv_data }}">
+            <button type="submit">Download CSV</button>
+        </form>
+        <a href="{{ url_for('index') }}">Back to Search</a>
+    </div>
+</body>
+</html>
