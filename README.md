@@ -12,6 +12,7 @@ The codebase is structured into four main classes:
 - `WebScraper` handles browser automation to extract links and detailed set data (e.g., breadcrumbs, card counts, release dates);
 - `DataSaver` saves the scraped data into a CSV file with a predefined structure; 
 - `PokemonSetScraper` orchestrates the entire process, from link extraction to data storage.
+
 The script runs automatically, scraping multiple pages and saving results to a file in the specified directory.
 
 Output
@@ -29,9 +30,10 @@ It is organized into several classes:
 - `PokellectorScraper` uses Selenium and BeautifulSoup to fetch and parse card data (e.g., names, sets, prices, images);
 - `PokemonCardProcessor` coordinates scraping for multiple Pokémon across English and Japanese sites; 
 - `FlaskApp` manages the web interface, rendering templates and enabling CSV downloads.
-- Users input Pokémon names via a form, view results in a table, and can download the data as a CSV file.
 
-## 1.3 Flask App (`/templates` & `/static/css`)
+Users input Pokémon names via a form, view results in a table, and can download the data as a CSV file.
+
+## 1.3 FlaskApp (`/templates` & `/static/css`)
 
 ### `/templates`
 
