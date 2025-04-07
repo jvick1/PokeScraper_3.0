@@ -9,7 +9,7 @@ from tqdm import tqdm
 import csv
 from datetime import datetime
 import json
-from io import BytesIO
+from io import BytesIO, StringIO
 import os
 
 """
@@ -234,11 +234,28 @@ class FlaskApp:
         @self.app.route('/download/<filename>', methods=['POST'])
         def download(filename):
             csv_data = request.form.get('csv_data')
-            buffer = BytesIO()
-            buffer.write(csv_data.encode('utf-8'))
-            buffer.seek(0)
+            if not csv_data:
+                return "No CSV data provided", 400
+
+            # Parse the CSV data into a DataFrame
+            csv_buffer = StringIO(csv_data)
+            df = pd.read_csv(csv_buffer)
+
+            # Add "Owned" column based on checkbox states
+            owned_values = []
+            for i in range(len(df)):
+                # Checkbox name format is "owned_{index}", default to False if not checked
+                owned = request.form.get(f'owned_{i}', 'False') == 'True'
+                owned_values.append(owned)
+            df['Owned'] = owned_values
+
+            # Convert DataFrame back to CSV
+            output_buffer = BytesIO()
+            df.to_csv(output_buffer, index=False)
+            output_buffer.seek(0)
+
             return send_file(
-                buffer,
+                output_buffer,
                 as_attachment=True,
                 download_name=filename,
                 mimetype='text/csv'
