@@ -17,54 +17,58 @@
             <input type="submit" value="Scrape New Cards">
         </form>
 
-        <table class="data" id="cardTable">
-            <thead>
-                <tr>
-                    <th>Image</th>
-                    <th>Name</th>
-                    <th>Set</th>
-                    <th>Card Number</th>
-                    <th>Prices</th>
-                    <th>Site</th>
-                    <th>Release Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row, img_url in rows|zip(image_urls) %}
+        <form id="cardForm" method="POST" action="{{ url_for('download', filename=filename) }}">
+            <table class="data" id="cardTable">
+                <thead>
                     <tr>
-                        <td>
-                            {% if img_url %}
-                                <img src="{{ img_url }}" alt="{{ row['Name'] }}" style="max-width: 100px; height: auto;">
-                            {% else %}
-                                No Image
-                            {% endif %}
-                        </td>
-                        <td>{{ row['Name'] }}</td>
-                        <td>{{ row['Set'] }}</td>
-                        <td>{{ row['Card Number'] }}</td>
-                        <td>
-                            {% set prices = row['Prices']|from_json %}
-                            {% if prices %}
-                                <ul class="price-list">
-                                    {% for url, price in prices.items() %}
-                                        <li>
-                                            <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
-                                                {{ price }} 
-                                            </a>
-                                        </li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                No Prices
-                            {% endif %}
-                        </td>
-                        <td>{{ row['Site'] }}</td>
-                        <td>{{ row['Release Date'] }}</td>
+                        <th>Image</th>
+                        <th>Name</th>
+                        <th>Set</th>
+                        <th>Card Number</th>
+                        <th>Prices</th>
+                        <th>Site</th>
+                        <th>Release Date</th>
+                        <th>Owned</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <form method="POST" action="{{ url_for('download', filename=filename) }}">
+                </thead>
+                <tbody>
+                    {% for row, img_url in rows|zip(image_urls) %}
+                        <tr>
+                            <td>
+                                {% if img_url %}
+                                    <img src="{{ img_url }}" alt="{{ row['Name'] }}" style="max-width: 100px; height: auto;">
+                                {% else %}
+                                    No Image
+                                {% endif %}
+                            </td>
+                            <td>{{ row['Name'] }}</td>
+                            <td>{{ row['Set'] }}</td>
+                            <td>{{ row['Card Number'] }}</td>
+                            <td>
+                                {% set prices = row['Prices']|from_json %}
+                                {% if prices %}
+                                    <ul class="price-list">
+                                        {% for url, price in prices.items() %}
+                                            <li>
+                                                <a href="{{ url }}" target="_blank" rel="noopener noreferrer">
+                                                    {{ price }} 
+                                                </a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    No Prices
+                                {% endif %}
+                            </td>
+                            <td>{{ row['Site'] }}</td>
+                            <td>{{ row['Release Date'] }}</td>
+                            <td>
+                                <input type="checkbox" name="owned_{{ loop.index0 }}" value="True" class="owned-checkbox">
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             <input type="hidden" name="csv_data" value="{{ csv_data }}">
             <button type="submit">Download CSV</button>
         </form>
@@ -76,15 +80,37 @@
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#cardTable').DataTable({
-                // Optional configuration
-                "order": [[1, "asc"]], // Default sort by Name column
+            var table = $('#cardTable').DataTable({
+                "order": [[6, "desc"]], // Default sort by Release Date (descending)
                 "columnDefs": [
-                    { "orderable": false, "targets": 0 }, // Disable sorting on Image column
-                    { "type": "num", "targets": 3 } // Numeric sorting for Card Number
+                    { 
+                        "targets": 0, // Image column
+                        "orderable": false // Disable sorting on Image
+                    },
+                    { 
+                        "targets": 3, // Card Number
+                        "type": "num" // Numeric sorting
+                    },
+                    { 
+                        "targets": 7, // Owned column
+                        "orderable": false // Disable sorting on Owned
+                    }
                 ],
-                "pageLenght":50,
+                "pageLength": 50,
                 "lengthMenu": [50, 75, 100]
+            });
+
+            // Ensure form submission includes checkbox states
+            $('#cardForm').on('submit', function() {
+                $('input[type=checkbox]').each(function() {
+                    if (!this.checked) {
+                        $('<input>').attr({
+                            type: 'hidden',
+                            name: this.name,
+                            value: 'False'
+                        }).appendTo('#cardForm');
+                    }
+                });
             });
         });
     </script>
