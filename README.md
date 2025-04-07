@@ -39,7 +39,7 @@ Users input Pokémon names via a form, view results in a table, and can download
 
 `index.html` serves as the landing page.
 
-`results.html` serves as a template for displaying scraped Pokémon card data in a Flask web application. It features a styled table powered by DataTables, showing columns for card images, names, sets, card numbers, prices (with clickable links), sites, and release dates, populated dynamically using Jinja2 templating. The page includes a form to search for more Pokémon cards, a button to download the data as a CSV file, and a link to return to the search page. External resources like Google Fonts, DataTables CSS/JS, and jQuery enhance styling and interactivity, with JavaScript configuring the table for sorting, pagination, and numeric handling of card numbers.
+`results.html` serves as a template for displaying scraped Pokémon card data in a Flask web application. It features a styled table powered by DataTables, showing columns for card images, names, sets, card numbers, prices (with clickable links), sites, and release dates, populated dynamically using Jinja2 templating. We just added a column to allow users to check if they have the card. The page includes a form to search for more Pokémon cards, a button to download the data as a CSV file, and a link to return to the search page. External resources like Google Fonts, DataTables CSS/JS, and jQuery enhance styling and interactivity, with JavaScript configuring the table for sorting, pagination, and numeric handling of card numbers.
 
 ### `/static/css`
 
