@@ -17,11 +17,9 @@ This codebase is organized into several classes, each with specific responsibili
 
 Config:
     Holds configuration constants such as file paths and URLs used throughout the application.
-    Contains static values like working directory path, English/Japanese site URLs, and CSV path.
 
 SetDataLoader:
     Manages the loading and accessing of Pokémon set release dates from a CSV file.
-    Provides methods to retrieve release dates for specific sets.
 
 DateFormatter:
     Handles the parsing and formatting of date strings.
@@ -30,6 +28,9 @@ DateFormatter:
 PokellectorScraper:
     Manages web scraping operations using Selenium and BeautifulSoup.
     Responsible for fetching page URLs and parsing card data from websites.
+
+PriceChartingScraper:
+    Manages web scraping operations for PriceCharting.com to fetch additional price data.    
 
 PokemonCardProcessor:
     Coordinates the processing of Pokémon names and collection of card data.
@@ -168,12 +169,131 @@ class PokellectorScraper:
                 img_url["pokellector"] = src
         return img_url
 
-#class PriceChartingScraper:
-#    def __init__(self):
-#        self.driver = webdriver.Chrome()
+class PriceChartingScraper:
+    def __init__(self):
+        options = webdriver.ChromeOptions()
+        #options.add_argument('--headless')
+        self.driver = webdriver.Chrome(options=options)
 
-#    def __del__(self):
-#        self.driver.quit()
+    def __del__(self):
+        try:
+            self.driver.quit()
+        except:
+            pass
+
+    def fetch_price_data(self, base_url, name, timeout=2):
+        """Fetch price data from PriceCharting for a given Pokémon name."""
+        search_url = f"{base_url}{name}"
+        card_data = []
+        try:
+            self.driver.get(search_url)
+            try:
+                WebDriverWait(self.driver, timeout).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+            except TimeoutException:
+                self.driver.execute_script("window.stop();")
+
+            html = self.driver.page_source
+            soup = bs(html, "html.parser")
+
+            results = soup.find_all("tr", id=lambda x: x and x.startswith("product-"))
+            for result in results:
+                card_data.append(self._parse_card(result, "PriceCharting"))
+
+        except WebDriverException as e:
+            print(f"Error scraping PriceCharting for {name}: {e}")
+            time.sleep(2)
+
+        return card_data
+
+    def _parse_card(self, result, site):
+        """Parse a single card's data from a PriceCharting result row."""
+        title_cell = result.find("td", class_="title")
+        title_text = title_cell.find("a").text.strip() if title_cell and title_cell.find("a") else "N/A"
+        card_name, card_number = self._split_name_and_number(title_text)
+
+        set_cell = result.find("td", class_="console phone-landscape-hidden")
+        card_set = set_cell.text.strip() if set_cell else "N/A"
+
+        prices = self._parse_prices(result)
+        img_url = {}
+
+        # Fetch release date from the linked page
+        release_date = "N/A"
+        try:
+            if title_cell and title_cell.find("a"):
+                details_url = title_cell.find("a")["href"] #+ "#itemdetails"
+                self.driver.get(details_url)
+                WebDriverWait(self.driver, 2).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+                details_html = self.driver.page_source
+                details_soup = bs(details_html, "html.parser")
+                
+                # Find release date in the #itemdetails table
+                details_table = details_soup.find("table", id="attribute")
+                if details_table:
+                    rows = details_table.find_all("tr")
+                    for row in rows:
+                        title = row.find("td", class_="title")
+                        if title and title.text.strip() == "Release Date:":
+                            date_cell = row.find("td", class_="details", itemprop="datePublished")
+                            release_date = date_cell.text.strip() if date_cell else "none"
+                            if release_date != "none":
+                                # Convert "October 19, 2018" to "2018-10-19"
+                                release_date = datetime.strptime(release_date, "%B %d, %Y").strftime("%Y-%m-%d")
+                            break
+                    
+                cover_div = details_soup.find("div", class_="cover")
+                if cover_div:
+                    details_img = cover_div.find("img", itemprop="image")
+                    if details_img and "src" in details_img.attrs:
+                        img_url["pricecharting"] = details_img["src"]
+
+                # fetch additional data (e.g., prices) in the future
+                # in price col add grade to cell??
+                
+        except Exception as e:
+            print(f"Error fetching details page: {e}")
+
+        return {
+            "Name": card_name,
+            "Images": img_url,
+            "Set": card_set,
+            "Card Number": card_number,
+            "Prices": prices,
+            "Site": site,
+            "Release Date": release_date
+        }
+
+    def _split_name_and_number(self, title_text):
+        """Split title text into card name and number."""
+        if "#" in title_text:
+            card_name, card_number = title_text.split("#", 1)
+            return card_name.strip(), card_number.strip()
+        return title_text.strip(), ""
+
+    def _parse_prices(self, result):
+        """Parse prices from a PriceCharting result row."""
+        prices = {}
+        price_types = [
+            ("used_price", "Ungraded"),
+            ("cib_price", "Grade 7"),
+            ("new_price", "Grade 8")
+        ]
+
+        for class_name, label in price_types:
+            price_cell = result.find("td", class_=f"price numeric {class_name}")
+            price_value = (
+                price_cell.find("span", class_="js-price").text.strip().replace("$", "")
+                if price_cell and price_cell.find("span", class_="js-price")
+                else "N/A"
+            )
+            prices[f"pricecharting.com/{label.lower().replace(' ', '-')}"] = price_value
+
+        return prices
+
 
 class PokemonCardProcessor:
     def __init__(self, config):
@@ -181,15 +301,22 @@ class PokemonCardProcessor:
         self.set_loader = SetDataLoader(config.CSV_PATH)
 
     def process_pokemon_names(self, names):
-        scraper = PokellectorScraper()
-        #----pricecharting_scraper = PriceChartingScraper()
+        
         all_cards = []
         for name in names.split(','):
             name = name.strip()
+            # Fetch PriceCharting data
+            pricecharting_scraper = PriceChartingScraper()
+            price_cards = pricecharting_scraper.fetch_price_data(self.config.PRICECHARTING_URL, name)
+            all_cards.extend(price_cards)
+
+            # Fetch Pokellector data
+            scraper = PokellectorScraper()
             eng_urls = scraper.fetch_page_urls(self.config.ENG_URL, name)
             jp_urls = scraper.fetch_page_urls(self.config.JP_URL, name)
-            all_cards.extend(scraper.fetch_card_data(self.config.ENG_URL, eng_urls, "English", self.set_loader))
-            all_cards.extend(scraper.fetch_card_data(self.config.JP_URL, jp_urls, "Japanese", self.set_loader))
+            all_cards.extend(scraper.fetch_card_data(self.config.ENG_URL, eng_urls, "Pokellector English", self.set_loader))
+            all_cards.extend(scraper.fetch_card_data(self.config.JP_URL, jp_urls, "Pokellector Japanese", self.set_loader))
+
         return all_cards
 
 class FlaskApp:
@@ -218,7 +345,17 @@ class FlaskApp:
                 df["Images"] = df["Images"].apply(json.dumps)
                 
                 rows = df.to_dict('records')
-                image_urls = [json.loads(row["Images"]).get("pokellector", "") for row in rows]
+                image_urls = []
+                for row in rows:
+                    try:
+                        images = json.loads(row["Images"])
+                        url = images.get("pokellector") or images.get("pricecharting") or ""
+                        if url and not url.startswith("http"):
+                            url = ""
+                        image_urls.append(url)
+                    except json.JSONDecodeError:
+                        print(f"JSON decode error for Images: {row['Images']}")
+                        image_urls.append("")
                 
                 csv_buffer = BytesIO()
                 df.to_csv(csv_buffer, index=False)
