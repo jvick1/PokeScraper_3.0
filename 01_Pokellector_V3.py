@@ -11,6 +11,7 @@ from datetime import datetime
 import json
 from io import BytesIO, StringIO
 import os
+import logging
 
 """
 This codebase is organized into several classes, each with specific responsibilities:
@@ -78,10 +79,17 @@ class DateFormatter:
 
 class PokellectorScraper:
     def __init__(self):
-        self.driver = webdriver.Chrome()
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        self.driver = webdriver.Chrome(options=options)
 
-    def __del__(self):
-        self.driver.quit()
+    def close(self):
+        try:
+            self.driver.quit()
+        except:
+            pass
 
     def fetch_page_urls(self, base_url, name):
         search_url = f"{base_url}/search?criteria={name}"
@@ -93,7 +101,7 @@ class PokellectorScraper:
             page_urls = [a['href'].replace(base_url, '') for a in soup.select("div.pagination a[href]")]
             return page_urls if page_urls else [search_url.replace(base_url, '')]
         except WebDriverException:
-            time.sleep(2)
+            time.sleep(1)
             return []
 
     def fetch_card_data(self, base_url, page_urls, site, set_loader, timeout=2):
@@ -116,7 +124,7 @@ class PokellectorScraper:
                 for card in cards:
                     card_data.append(self._parse_card(card, site, set_loader))
             except WebDriverException:
-                time.sleep(2)
+                time.sleep(1)
         return card_data
 
     def _parse_card(self, card, site, set_loader):
@@ -172,10 +180,12 @@ class PokellectorScraper:
 class PriceChartingScraper:
     def __init__(self):
         options = webdriver.ChromeOptions()
-        #options.add_argument('--headless')
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
         self.driver = webdriver.Chrome(options=options)
 
-    def __del__(self):
+    def close(self):
         try:
             self.driver.quit()
         except:
@@ -299,24 +309,63 @@ class PokemonCardProcessor:
     def __init__(self, config):
         self.config = config
         self.set_loader = SetDataLoader(config.CSV_PATH)
+        self._setup_logging()
+
+    def _setup_logging(self):
+        """Set up logging to a file in SCRIPT_DIR."""
+        # Use SCRIPT_DIR from config for log file path
+        log_file = os.path.join(self.config.SCRIPT_DIR, 'pokemon_processor.log')
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_file, mode='a'),
+                logging.StreamHandler()  # Optional: Remove if no console output needed
+            ]
+        )
+        self.logger = logging.getLogger(__name__)   
 
     def process_pokemon_names(self, names):
-        
+        start_time = time.time()
+        self.logger.info(f"Starting process_pokemon_names for names: {names}")
+        self.pricecharting_scraper = PriceChartingScraper()
+        self.scraper = PokellectorScraper()
         all_cards = []
-        for name in names.split(','):
-            name = name.strip()
-            # Fetch PriceCharting data
-            pricecharting_scraper = PriceChartingScraper()
-            price_cards = pricecharting_scraper.fetch_price_data(self.config.PRICECHARTING_URL, name)
-            all_cards.extend(price_cards)
+        try:
+            for name in names.split(','):
+                name = name.strip()
+                pokemon_start_time = time.time()
 
-            # Fetch Pokellector data
-            scraper = PokellectorScraper()
-            eng_urls = scraper.fetch_page_urls(self.config.ENG_URL, name)
-            jp_urls = scraper.fetch_page_urls(self.config.JP_URL, name)
-            all_cards.extend(scraper.fetch_card_data(self.config.ENG_URL, eng_urls, "Pokellector English", self.set_loader))
-            all_cards.extend(scraper.fetch_card_data(self.config.JP_URL, jp_urls, "Pokellector Japanese", self.set_loader))
+                # Fetch Pokellector English data
+                eng_start = time.time()
+                eng_urls = self.scraper.fetch_page_urls(self.config.ENG_URL, name)
+                all_cards.extend(self.scraper.fetch_card_data(self.config.ENG_URL, eng_urls, "Pokellector English", self.set_loader))
+                self.logger.info(f"Fetched Pokellector English data for {name} in {time.time() - eng_start:.2f} seconds")
+                
+                # Fetch Pokellector Japanese data
+                jp_start = time.time()
+                jp_urls = self.scraper.fetch_page_urls(self.config.JP_URL, name)
+                all_cards.extend(self.scraper.fetch_card_data(self.config.JP_URL, jp_urls, "Pokellector Japanese", self.set_loader))
+                self.logger.info(f"Fetched Pokellector Japanese data for {name} in {time.time() - jp_start:.2f} seconds")
 
+                # Fetch PriceCharting data
+                price_start = time.time()
+                price_cards = self.pricecharting_scraper.fetch_price_data(self.config.PRICECHARTING_URL, name)
+                all_cards.extend(price_cards)
+                self.logger.info(f"Fetched PriceCharting data for {name} in {time.time() - price_start:.2f} seconds")
+
+                pokemon_duration = time.time() - pokemon_start_time
+                self.logger.info(f"Completed processing {name} in {pokemon_duration:.2f} seconds")
+        
+        finally:
+            # Close scrapers to shut down browser windows after data pull
+            self.pricecharting_scraper.close()
+            self.scraper.close()
+
+        total_duration = time.time() - start_time
+        self.logger.info(f"Finished process_pokemon_names in {total_duration:.2f} seconds with {len(all_cards)} cards collected")
+        
         return all_cards
 
 class FlaskApp:
