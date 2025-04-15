@@ -2,6 +2,10 @@
 
 This repository contains two Python scripts designed to scrape Pokémon-related data from pokellector.com (English) and jp.pokellector.com (Japanese). Together, these tools enable comprehensive data collection for Pokémon trading card enthusiasts, researchers, or developers, covering both set-level metadata and individual card details across English and Japanese markets:
 
+![Image](https://github.com/user-attachments/assets/d2953d6e-8992-4b60-a966-dfceb9734f01)
+
+***Example: Search term "slowpoke" filter "126" Results from both Price Charting and Pokellector.***
+
 # 1. Data Collection
 ## 1.1 Pokémon Set Data Scraper (`0_Poke_Sets_v2.py`)
 
