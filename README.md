@@ -32,6 +32,7 @@ It is organized into several classes:
 - `SetDataLoader` loads release dates from a CSV file;
 - `DateFormatter` standardizes date strings into YYYY-MM-DD format;
 - `PokellectorScraper` uses Selenium and BeautifulSoup to fetch and parse card data (e.g., names, sets, prices, images);
+- `PriceChartingScraper` uses Selenium and BeautifulSoup to fetch and parse card data. Pulls full set and loops over pages to pull dates. Next step: pull ts of price data
 - `PokemonCardProcessor` coordinates scraping for multiple Pokémon across English and Japanese sites; 
 - `FlaskApp` manages the web interface, rendering templates and enabling CSV downloads.
 
