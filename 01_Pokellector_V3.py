@@ -296,14 +296,14 @@ class PriceChartingScraper:
         for class_name, label in price_types:
             price_cell = result.find("td", class_=f"price numeric {class_name}")
             price_value = (
-                price_cell.find("span", class_="js-price").text.strip().replace("$", "")
+                price_cell.find("span", class_="js-price").text.strip()
                 if price_cell and price_cell.find("span", class_="js-price")
-                else "N/A"
+                else None
             )
-            prices[f"pricecharting.com/{label.lower().replace(' ', '-')}"] = price_value
+            if price_value:
+                prices[f"pricecharting.com/{label.lower().replace(' ', '-')}"] = price_value
 
         return prices
-
 
 class PokemonCardProcessor:
     def __init__(self, config):
