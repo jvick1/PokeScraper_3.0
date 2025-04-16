@@ -25,7 +25,7 @@ Output
 
 ## 1.2 Pokémon Card Scraper (`01_Pokellector_V3.py`)
 
-This Python script builds a Flask web application to scrape and display Pokémon card data from `www.pokellector.com` and `jp.pokellector.com`. 
+This Python script builds a Flask web application to scrape and display Pokémon card data from `www.pokellector.com`, `jp.pokellector.com` and `www.pricecharting.com`. 
 
 It is organized into several classes: 
 - `Config` stores static constants like URLs and file paths;
