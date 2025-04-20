@@ -220,13 +220,14 @@ class PriceChartingScraper:
     def _parse_card(self, result, site):
         """Parse a single card's data from a PriceCharting result row."""
         title_cell = result.find("td", class_="title")
+        details_url = title_cell.find("a")["href"]
         title_text = title_cell.find("a").text.strip() if title_cell and title_cell.find("a") else "N/A"
         card_name, card_number = self._split_name_and_number(title_text)
 
         set_cell = result.find("td", class_="console phone-landscape-hidden")
         card_set = set_cell.text.strip() if set_cell else "N/A"
 
-        prices = self._parse_prices(result)
+        prices = self._parse_prices(details_url, result)
         img_url = {}
 
         # Fetch release date from the linked page
@@ -284,7 +285,7 @@ class PriceChartingScraper:
             return card_name.strip(), card_number.strip()
         return title_text.strip(), ""
 
-    def _parse_prices(self, result):
+    def _parse_prices(self, details_url, result):
         """Parse prices from a PriceCharting result row."""
         prices = {}
         price_types = [
@@ -301,7 +302,7 @@ class PriceChartingScraper:
                 else None
             )
             if price_value:
-                prices[f"pricecharting.com/{label.lower().replace(' ', '-')}"] = price_value
+                prices[f"{details_url}"] = price_value
 
         return prices
 
@@ -313,7 +314,6 @@ class PokemonCardProcessor:
 
     def _setup_logging(self):
         """Set up logging to a file in SCRIPT_DIR."""
-        # Use SCRIPT_DIR from config for log file path
         log_file = os.path.join(self.config.SCRIPT_DIR, 'pokemon_processor.log')
         
         logging.basicConfig(
